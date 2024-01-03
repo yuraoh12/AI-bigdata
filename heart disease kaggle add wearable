@@ -1,0 +1,273 @@
+{
+  "nbformat": 4,
+  "nbformat_minor": 0,
+  "metadata": {
+    "colab": {
+      "provenance": [],
+      "include_colab_link": true
+    },
+    "kernelspec": {
+      "name": "python3",
+      "display_name": "Python 3"
+    },
+    "language_info": {
+      "name": "python"
+    }
+  },
+  "cells": [
+    {
+      "cell_type": "markdown",
+      "metadata": {
+        "id": "view-in-github",
+        "colab_type": "text"
+      },
+      "source": [
+        "<a href=\"https://colab.research.google.com/github/yuraoh12/AI-bigdata/blob/main/heart%20disease%20kaggle%20add%20wearable\" target=\"_parent\"><img src=\"https://colab.research.google.com/assets/colab-badge.svg\" alt=\"Open In Colab\"/></a>"
+      ]
+    },
+    {
+      "cell_type": "code",
+      "execution_count": null,
+      "metadata": {
+        "id": "wXLPjLZKqwFj"
+      },
+      "outputs": [],
+      "source": [
+        "import pandas as pd\n",
+        "\n",
+        "df = pd.read_csv('/content/heart.csv')\n",
+        "df2 = pd.read_csv('https://github.com/kairess/toy-datasets/raw/master/aw_fb_data.csv')\n",
+        "df2.head()"
+      ]
+    },
+    {
+      "cell_type": "code",
+      "source": [
+        "df.info()"
+      ],
+      "metadata": {
+        "id": "XFDJE_werL4R"
+      },
+      "execution_count": null,
+      "outputs": []
+    },
+    {
+      "cell_type": "code",
+      "source": [
+        "df.nunique()"
+      ],
+      "metadata": {
+        "id": "Ez646syerQIO"
+      },
+      "execution_count": null,
+      "outputs": []
+    },
+    {
+      "cell_type": "code",
+      "source": [
+        "# auto 시각화\n",
+        "!pip install -q autoviz"
+      ],
+      "metadata": {
+        "id": "YMzkdl7arUfL"
+      },
+      "execution_count": null,
+      "outputs": []
+    },
+    {
+      "cell_type": "code",
+      "source": [
+        "from autoviz.AutoViz_Class import AutoViz_Class\n",
+        "import matplotlib.pyplot as plt\n",
+        "plt.style.use('dark_background')\n",
+        "\n",
+        "AV = AutoViz_Class()\n",
+        "AV.AutoViz(filename='',\n",
+        "           dfte=df,\n",
+        "           depVar='target',\n",
+        "           verbose=1, #0:간단히 2:상세하게 로그를 보겠다.\n",
+        "           max_rows_analyzed=df.shape[0],\n",
+        "           max_cols_analyzed=df.shape[1],\n",
+        "           )"
+      ],
+      "metadata": {
+        "id": "kyhAtN80rpwy"
+      },
+      "execution_count": null,
+      "outputs": []
+    },
+    {
+      "cell_type": "code",
+      "source": [
+        "# Lazypredict : 자동으로 베스트 모델을 찾아주는 패키지\n",
+        "!pip install lazypredict"
+      ],
+      "metadata": {
+        "id": "RIDKBERMtRzp"
+      },
+      "execution_count": null,
+      "outputs": []
+    },
+    {
+      "cell_type": "code",
+      "source": [
+        "y_data = df.pop('target') # 회귀 모델에서 사용하는 단어\n",
+        "x_data = df\n",
+        "\n",
+        "print(x_data.shape)\n",
+        "print(y_data.shape)"
+      ],
+      "metadata": {
+        "colab": {
+          "base_uri": "https://localhost:8080/"
+        },
+        "id": "V5J4WfzrtimU",
+        "outputId": "38a7aefc-83b2-4f76-9db0-5a08ee4137c1"
+      },
+      "execution_count": null,
+      "outputs": [
+        {
+          "output_type": "stream",
+          "name": "stdout",
+          "text": [
+            "(1025, 13)\n",
+            "(1025,)\n"
+          ]
+        }
+      ]
+    },
+    {
+      "cell_type": "code",
+      "source": [
+        "from sklearn.model_selection import train_test_split\n",
+        "x_train, x_test, y_train, y_test = train_test_split(x_data, y_data, test_size = 0.2, random_state=2024, stratify=y_data)\n",
+        "print(x_train.shape, y_train.shape)\n",
+        "print(y_test.shape, y_test.shape)"
+      ],
+      "metadata": {
+        "colab": {
+          "base_uri": "https://localhost:8080/"
+        },
+        "id": "XatEaJYdt-dD",
+        "outputId": "843c2bc9-e8ce-49d2-9883-c1786f064e7d"
+      },
+      "execution_count": null,
+      "outputs": [
+        {
+          "output_type": "stream",
+          "name": "stdout",
+          "text": [
+            "(820, 13) (820,)\n",
+            "(205,) (205,)\n"
+          ]
+        }
+      ]
+    },
+    {
+      "cell_type": "code",
+      "source": [
+        "from lazypredict.Supervised import LazyClassifier\n",
+        "clf = LazyClassifier(verbose=0, predictions=True)\n",
+        "model, predictions = clf.fit(x_train, x_test, y_train, y_test)\n",
+        "model"
+      ],
+      "metadata": {
+        "id": "uAk64Qn3ukvr"
+      },
+      "execution_count": null,
+      "outputs": []
+    },
+    {
+      "cell_type": "code",
+      "source": [
+        "predictions.head()"
+      ],
+      "metadata": {
+        "id": "jFmALxL7vZ0R"
+      },
+      "execution_count": null,
+      "outputs": []
+    },
+    {
+      "cell_type": "code",
+      "source": [
+        "from sklearn.metrics import classification_report\n",
+        "\n",
+        "for model_name in predictions.columns.tolist():\n",
+        "  print(f'{model_name}')\n",
+        "  print(classification_report(y_test, predictions[model_name]))"
+      ],
+      "metadata": {
+        "id": "CDrvzoetv23I"
+      },
+      "execution_count": null,
+      "outputs": []
+    },
+    {
+      "cell_type": "code",
+      "source": [
+        "from lightgbm import LGBMClassifier\n",
+        "from sklearn.metrics import accuracy_score\n",
+        "\n",
+        "lgbm = LGBMClassifier()\n",
+        "lgbm.fit(x_train, y_train)\n",
+        "y_pred = lgbm.predict(x_test)\n",
+        "accuracy_score(y_pred, y_test)"
+      ],
+      "metadata": {
+        "id": "G_5H4JB4wRB4"
+      },
+      "execution_count": null,
+      "outputs": []
+    },
+    {
+      "cell_type": "code",
+      "source": [
+        "# svm 튜닝없이\n",
+        "import numpy as np\n",
+        "from sklearn.svm import SVC\n",
+        "from sklearn.pipeline import Pipeline\n",
+        "from sklearn.preprocessing import StandardScaler\n",
+        "\n",
+        "X_train = pd.DataFrame(x_train)\n",
+        "X_test = pd.DataFrame(x_test)\n",
+        "\n",
+        "pipe = Pipeline(steps=[(\"preprocessor\", StandardScaler()), (\"classifier\", SVC())])\n",
+        "pipe.fit(x_train, y_train)\n",
+        "y_pred = pipe.predict(x_test)\n",
+        "accuracy_score(y_pred, y_test)"
+      ],
+      "metadata": {
+        "colab": {
+          "base_uri": "https://localhost:8080/"
+        },
+        "id": "fXIedGwKw-0F",
+        "outputId": "2ecc208a-10cc-4ea7-8677-ae1a2cc8cca7"
+      },
+      "execution_count": null,
+      "outputs": [
+        {
+          "output_type": "execute_result",
+          "data": {
+            "text/plain": [
+              "0.9414634146341463"
+            ]
+          },
+          "metadata": {},
+          "execution_count": 26
+        }
+      ]
+    },
+    {
+      "cell_type": "code",
+      "source": [
+        "pipe['classifier'].get_params()"
+      ],
+      "metadata": {
+        "id": "eOCE09omx6vq"
+      },
+      "execution_count": null,
+      "outputs": []
+    }
+  ]
+}
