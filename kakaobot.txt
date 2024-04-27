@@ -1,0 +1,129 @@
+const scriptName = "test_bot";
+const { Jsoup } = org.jsoup;
+
+const _cmdArr = ["명령어", "날씨", "질문"];
+
+// OpenAI API Key
+const OPENAI_API_KEY = "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";
+
+function getChatGPTResponse(msg) {
+    try {
+        let data = {
+            "model": "text-davinci-003",
+            "prompt": msg,
+            "max_tokens": 150,
+            "temperature": 0.7
+        };
+
+        let response = Jsoup.connect("https://api.openai.com/v1/completions")
+            .header("Authorization", "Bearer " + OPENAI_API_KEY)
+            .header("Content-Type", "application/json")
+            .requestBody(JSON.stringify(data))
+            .ignoreContentType(true)
+            .ignoreHttpErrors(true)
+            .timeout(200000)
+            .post();
+
+        if (response.statusCode() === 200) {
+            let json = JSON.parse(response.text());
+            return json.choices[0].text.trim();
+        } else {
+            Log.e("ChatGPT API 요청 실패: 응답 코드 - " + response.statusCode());
+            return "ChatGPT API를 호출하는 중 오류가 발생했습니다.";
+        }
+    } catch (e) {
+        Log.e("ChatGPT API 요청 실패: " + e);
+        return "ChatGPT API를 호출하는 중 오류가 발생했습니다.";
+    }
+}
+
+function response(room, msg, sender, isGroupChat, replier, imageDB, packageName) {
+    if (msg.startsWith("/")) {
+        let cmd = msg.slice(1);
+        var cmdArr = cmd.split(' ');
+        if (_cmdArr.includes(cmdArr[0])) {
+            let param = cmdArr[0];
+
+            if (param === '날씨') {
+                let area = msg.substr(cmdArr[0].length + 1).trim();
+
+                if (!isNaN(area)) {
+                    replier.reply("올바른 도시 이름을 입력하세요.");
+                    return;
+                }
+
+                let repMsg = getWeatherFromNaver(area);
+                replier.reply(repMsg);
+            }
+
+            if (param === "질문" || param === "q") {
+                let question = msg.substr(cmdArr[0].length + 1).trim();
+                let resGpt = getChatGPTResponse(question);
+                replier.reply(resGpt);
+            }
+        }
+    }
+
+    // 추가 기능: 가르치기 및 학습제거
+    if (msg.indexOf("/가르치기 ") == 0 && msg.indexOf(":") != -1) {
+        var a = msg.replace("/가르치기 ", "").split(":")[0];
+        var b = msg.replace("/가르치기 " + a + ":", "");
+        DataBase.setDataBase("가르치기/" + a, b);
+        replier.reply(a + "(이)라고 말하면 " + b + "(이)라고 말하는 것을 배웠습니다.");
+    }
+
+    if (msg.indexOf("/가르치기 ") == 0 && msg.indexOf(":") == -1) {
+        replier.reply("/가르치기 A:B 꼴로 해주세요!!\n-> A라고 말하면 B라고 대답");
+    }
+
+    var lear = DataBase.getDataBase("가르치기/" + msg);
+
+    if (lear != null) {
+        replier.reply(lear);
+    }
+
+    if (msg.indexOf("/학습제거 ") == 0) {
+        var remo = msg.replace("/학습제거 ", "");
+        DataBase.removeDataBase("가르치기/" + remo);
+        replier.reply(remo + "에 대한 학습을 잊었습니다.");
+    }
+}
+
+// 네이버 날씨 파싱 함수
+// url 샘플 : https://m.search.naver.com/search.naver?&query=날씨+서울
+function getWeatherFromNaver(msg) {
+    try {
+        let data = Jsoup.connect("https://m.search.naver.com/search.naver?&query=날씨+" + msg).get();
+
+        let retMsg = '';
+        data = data.select(".weather_info")[0];
+
+        let _today = data.select("._today");
+
+        // 현재 온도
+        let cur_temp = _today.select(".temperature_text strong").text().slice(5);
+        // 어제와 온도차이
+        let diff_temp = data.select(".temperature_info .temperature").text();
+        let diff_stat = data.select(".temperature_info .blind").text();
+
+        // 체감
+        let v1 = _today.select(".summary_list .sort .desc")[0].text();
+        // 습도
+        let v2 = _today.select(".summary_list .sort .desc")[1].text();;
+                // 풍속
+        let v3 = _today.select(".summary_list .sort .desc")[2].text();
+
+        retMsg += "현재 " + msg + "의 온도는 " + cur_temp + '이며 어제보다 ' + diff_temp;
+
+        retMsg += "\n\n현재온도 : " + cur_temp;
+        retMsg += "\n체감온도 : " + v1;
+        retMsg += "\n습도 : " + v2;
+        retMsg += "\n풍속 : " + v3;
+
+        return retMsg;
+    } catch (e) {
+        Log.e(e);
+        return "날씨 정보를 가져오는 중 오류가 발생했습니다.";
+    }
+}
+        
